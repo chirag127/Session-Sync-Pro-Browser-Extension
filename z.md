@@ -1,306 +1,479 @@
-
+Okay, here is a comprehensive Product Requirements Document (PRD) for the AI agent tasked with building the "Session Sync Pro" browser extension. This PRD incorporates all the decisions made in the Q&A and aims to provide sufficient detail for building a production-ready extension.
 
 ---
 
 # Product Requirements Document (PRD): Session Sync Pro Browser Extension
 
 **Version:** 1.0
-**Date:** 2023-10-27
+**Date:** October 26, 2023
 **Author:** [Your Name/AI Prompt]
-**Agent:** AI Development Agent
+**Target Audience:** AI Development Agent
 
 ## 1. Overview
 
 **Product Name:** Session Sync Pro
 
-**Goal:** To create a browser extension that enables users to easily save, manage, and restore complete web sessions (including cookies, `localStorage`, and `sessionStorage`) for specific websites. The extension will feature user accounts (sign up/sign in via email/password) to facilitate the synchronization of saved sessions across multiple devices, ensuring data persistence and accessibility.
+**Product Goal:** To create a browser extension that allows users to securely save, manage, and restore complete web sessions (including cookies, `localStorage`, and `sessionStorage`) for specific websites. The extension will feature user accounts (Sign Up/Sign In via Email/Password) to enable seamless synchronization of saved sessions across multiple devices using a dedicated backend service (Express.js + MongoDB).
 
-**Problem Statement:** Users often need to manage multiple accounts (e.g., work, personal, testing) on the same website. Constantly logging out and back in is time-consuming and inefficient. Existing browser profile features can be cumbersome, and password managers don't typically handle full session states, including `localStorage` or `sessionStorage`. This extension aims to provide a one-click solution for switching between saved sessions for specific websites.
+**Vision:** Session Sync Pro aims to significantly improve productivity for users who frequently switch between different accounts or states on the same website (e.g., developers, testers, users with multiple profiles) by providing a one-click session restore mechanism and cross-device synchronization.
 
-**Vision:** To become the go-to browser extension for users who need seamless switching between different sessions on the same website, offering a secure (within defined parameters) and user-friendly experience with cross-device synchronization.
+## 2. Goals
 
-## 2. Goals & Objectives
-
-*   **Simplify Multi-Account Management:** Reduce the friction and time spent logging in and out of different accounts on the same website.
-*   **Enhance Productivity:** Allow developers, testers, and power users to switch contexts quickly.
-*   **Provide Cross-Device Consistency:** Enable users to access their saved sessions from any device where they are logged into the extension.
-*   **Ensure User Control:** Give users clear options for saving, naming, restoring, and managing their sessions.
-*   **Deliver a Reliable Service:** Build a stable and performant extension and backend system.
+*   **G1:** Provide a reliable mechanism to save the complete session state (cookies, `localStorage`, `sessionStorage`) for a specific website domain.
+*   **G2:** Enable users to restore saved sessions easily, replacing the current session state for that domain.
+*   **G3:** Implement a user authentication system (Email/Password) for account creation and login.
+*   **G4:** Synchronize saved sessions across devices for authenticated users via a secure backend infrastructure.
+*   **G5:** Offer an intuitive and user-friendly interface within the browser (popup and context menu).
+*   **G6:** Ensure user data privacy and security during transit and storage (within the defined constraints).
+*   **G7:** Build a robust and maintainable solution using modern web technologies (Manifest V3, Express.js, MongoDB).
 
 ## 3. Target Audience
 
-*   **Web Developers & Testers:** Need to test websites with various user roles, permissions, and data states.
-*   **Social Media Managers:** Manage multiple client or personal accounts on platforms like Twitter, Facebook, LinkedIn, etc.
-*   **Freelancers & Consultants:** Access client accounts on various platforms without conflicting with their own sessions.
-*   **General Power Users:** Anyone frequently switching between multiple logins (e.g., personal/work Google accounts, different shopping site accounts).
+*   **Web Developers:** Testing applications with different user roles or data states.
+*   **QA Engineers / Testers:** Managing multiple test accounts and scenarios for web applications.
+*   **Users with Multiple Accounts:** Individuals managing personal/work accounts on platforms like social media, project management tools, etc.
+*   **Power Users:** Anyone needing to quickly switch contexts or save application states on specific websites.
 
 ## 4. Core Features and Functional Requirements
 
-### 4.1 Technology Stack & Project Structure
+This section details the specific functionalities the AI agent must implement. All functional requirements listed are considered **Priority: P0 (Essential for Release)** unless otherwise noted.
 
-*   **FR1.1 (P0): Extension Frontend:**
-    *   Technology: Browser Extension (Manifest V3) using HTML, CSS, JavaScript.
-    *   No specific JS framework mandated, use vanilla JS or a lightweight library suitable for extensions if needed.
-    *   Ensure compatibility with major Chromium-based browsers (Chrome, Edge) and Firefox (consider potential API differences).
-*   **FR1.2 (P0): Backend:**
-    *   Technology: Node.js with Express.js framework.
-    *   Database: MongoDB.
-    *   Purpose: User authentication, storing user data, and storing/syncing saved session data.
-*   **FR1.3 (P0): Project Structure:**
-    *   Create a monorepo or clearly separated directories:
-        *   `extension/`: Contains all code for the browser extension (manifest.json, popup, background scripts, content scripts, assets, etc.).
-        *   `backend/`: Contains all code for the Express.js server and database interaction logic.
-    *   Structure code within each directory modularly (e.g., separate modules/files for auth, session handling, UI components, API routes, database models).
-*   **FR1.4 (P0): Documentation & Maintainability:**
-    *   Code must be well-commented, explaining complex logic.
-    *   Follow consistent coding standards (e.g., ESLint/Prettier configuration).
-    *   Provide a README.md in both `extension/` and `backend/` directories explaining setup, build, and deployment steps.
-    *   Ensure the architecture facilitates future maintenance and potential feature additions.
+### 4.1 Session Saving
 
-### 4.2 Session Saving
+*   **FR1.1 (P0): Save Session Data**
+    *   **Description:** The extension must be able to capture and save session-related data for the *currently active tab's specific website domain* (e.g., `app.example.com`, not `*.example.com`).
+    *   **Data Scope:** Includes:
+        *   All non-HttpOnly cookies associated with the exact domain.
+        *   The entire contents of `localStorage` for the origin.
+        *   The entire contents of `sessionStorage` for the origin.
+    *   **User Story:** As a user, when I am on `my-app.com/dashboard`, I want to save my current login session and application state so I can restore it later.
+    *   **Acceptance Criteria:**
+        *   Saving captures cookies relevant only to the exact hostname shown in the URL bar.
+        *   Saving captures the complete `localStorage` key-value pairs for that origin.
+        *   Saving captures the complete `sessionStorage` key-value pairs for that origin.
+        *   The saved data is stored correctly either locally or prepared for backend sync.
 
-*   **FR2.1 (P0): Session Definition:** A "session" encompasses all relevant data needed to replicate the user's state on a specific website. This includes:
-    *   Cookies (associated with the *exact* domain).
-    *   `localStorage` entries for the origin.
-    *   `sessionStorage` entries for the origin.
-*   **FR2.2 (P0): Saving Trigger:** Users must manually initiate the saving process.
-    *   A "Save Current Session" button/option shall be available within the extension's browser action popup when the user is actively viewing a website tab.
-    *   A "Save Current Session for this Site" option shall be available in the context menu when the user right-clicks on a webpage.
-*   **FR2.3 (P0): Session Scope:** Sessions are saved for the *specific origin* (protocol + hostname + port) of the currently active tab. For example, a session saved on `https://app.example.com:8080` is distinct from `https://www.example.com`. It does *not* apply to the entire base domain (`*.example.com`).
-*   **FR2.4 (P0): Session Naming:** Upon triggering "Save Session", the user must be prompted to provide a custom, meaningful name for the session (e.g., "Admin Account", "Test User - Feature X", "Personal Login").
-    *   Provide a default suggestion (e.g., Website Name + Timestamp), but allow easy overriding.
-    *   Validate the name (e.g., non-empty, reasonable length limit).
-*   **FR2.5 (P0): Data Capture:** When saving, the extension must:
-    *   Use the `chrome.cookies.getAll` API (or equivalent) to retrieve all cookies matching the current tab's URL's domain.
-    *   Execute content scripts (if necessary, using appropriate permissions) to access and retrieve the current state of `localStorage` and `sessionStorage` for the page's origin.
-    *   Package the captured cookies, `localStorage` data (as key-value pairs), and `sessionStorage` data (as key-value pairs) along with the session name, website URL (origin), and potentially a timestamp and favicon URL.
-*   **FR2.6 (P1): Handling HttpOnly Cookies during Save:**
-    *   The extension *can* retrieve metadata about `HttpOnly` cookies (like name, domain, path) using `chrome.cookies.getAll`. However, it *cannot* read their `value`.
-    *   When saving, store all retrievable cookie information (including non-HttpOnly values and metadata for HttpOnly ones).
-    *   **Crucially:** Do *not* attempt to guess or infer HttpOnly cookie values. Store exactly what the API provides. The limitation lies in reading, not setting during restore.
-*   **FR2.7 (P0): Local Storage (Logged Out / Offline):** If the user is not logged in or the backend is unreachable, the saved session data (name, URL, cookies, storage data) must be stored securely within the browser's extension storage (`chrome.storage.local`).
-*   **FR2.8 (P0): Cloud Storage (Logged In):** If the user is logged in and the backend is reachable, the saved session data must be sent to the backend API for persistent storage and synchronization. Trigger sync immediately after a successful local save.
-*   **FR2.9 (P0): Save Feedback:** Provide clear visual feedback to the user upon successful save (e.g., "Session '[Session Name]' saved for [Website Name]") or failure (e.g., "Failed to save session. Error: [details]").
+*   **FR1.2 (P0): Manual Save Trigger**
+    *   **Description:** Session saving must be initiated manually by the user.
+    *   **Trigger:** A dedicated "Save Current Session" button within the extension's browser action popup when the user is on a target website. An option to save via the page's context menu should also be available.
+    *   **User Story:** As a user, I want to explicitly decide when to save a session by clicking a button in the extension popup or right-clicking on the page.
+    *   **Acceptance Criteria:**
+        *   A "Save Current Session" button/option is visible and functional in the popup UI when viewing a webpage.
+        *   A "Save Session for this Site" option is available in the right-click context menu on webpages.
+        *   Clicking the save button/option triggers the session saving process (FR1.1).
 
-### 4.3 Session Restoration
+*   **FR1.3 (P0): Custom Session Naming**
+    *   **Description:** When saving a session, the user must be prompted to provide a custom, meaningful name for it.
+    *   **Implementation:** After clicking "Save Session", prompt the user (e.g., via a modal in the popup or a dedicated input field) to enter a name (e.g., "Admin Account", "Test User Dave"). A default name (e.g., based on timestamp or domain) can be suggested but must be editable.
+    *   **User Story:** As a user saving multiple sessions for `jira.example.com`, I want to name them "Bug Triager Role" and "Developer Role" so I can easily distinguish them later.
+    *   **Acceptance Criteria:**
+        *   User is prompted for a session name upon initiating a save.
+        *   The provided name is stored alongside the session data.
+        *   Input validation ensures a name is provided (cannot be empty).
 
-*   **FR3.1 (P0): Restoration Trigger:** Users initiate restoration from the extension's interface.
-    *   The browser action popup will list saved sessions. Each session will have a "Restore" button.
-    *   The context menu (when on a webpage) could potentially list sessions *relevant to the current site* with a "Restore" option.
-*   **FR3.2 (P0): Pre-Restoration Check:** Before restoring a session for Website X:
-    *   The user should ideally navigate to Website X first. The extension UI might guide them or enable restoration directly, but the target tab for restoration must be identified.
-    *   Check if the user is *already* logged in or has an active session on Website X in the target tab.
-*   **FR3.3 (P0): Overwrite Confirmation:** If an active session (detected by the presence of relevant cookies/storage for the domain) exists in the target tab, **prompt the user**: "Restoring '[Saved Session Name]' will replace your current session on [Website Name]. Do you want to continue? [Yes/Replace] [No/Cancel]".
-*   **FR3.4 (P0): Restoration Process:** Upon confirmation (or if no existing session was detected):
-    *   Retrieve the target saved session data (from local storage or fetched from the backend if not available locally).
-    *   **Clear Existing Data:** Remove all existing cookies, `localStorage` entries, and `sessionStorage` entries for the target website's origin in the active tab. Use `chrome.cookies.remove` and content scripts for storage clearance.
-    *   **Set Saved Data:**
-        *   Use `chrome.cookies.set` to add each saved cookie. This can set `HttpOnly` cookies even though their values couldn't be read during save, *provided* the necessary metadata (domain, path, name, secure, etc.) was saved correctly.
-        *   Execute content scripts to populate `localStorage` and `sessionStorage` with the saved key-value pairs.
-*   **FR3.5 (P1): Handling HttpOnly Cookies during Restore:**
-    *   The success of restoring `HttpOnly` cookies depends on whether the critical session identifier was among them *and* if the server accepts the session based solely on setting these known cookies.
-    *   The extension should attempt to set *all* saved cookies using the `chrome.cookies.set` API.
-    *   If restoration appears successful but the user isn't logged in, it might be due to HttpOnly limitations or other server-side checks. The extension cannot fully guarantee success due to this browser security feature.
-*   **FR3.6 (P0): Post-Restoration Action:** After attempting to restore the session data:
-    *   **Prompt the user**: "Session restored. Reload the page for changes to take full effect? [Reload Now] [Reload Later]".
-    *   Do *not* automatically reload the page without user confirmation.
-*   **FR3.7 (P0): Restoration Feedback:** Provide clear visual feedback:
-    *   Success: "Session '[Session Name]' restored for [Website Name]. Please reload the page."
-    *   Failure: "Failed to restore session. Error: [details]." (e.g., Cannot access tab, failed to clear storage).
-*   **FR3.8 (P1): Session Expiration Handling:**
-    *   The extension primarily stores session *data*, not validity status.
-    *   If a user restores an old session whose server-side counterpart has expired, the website itself will handle the invalid session (e.g., redirect to login).
-    *   **Notification:** When a user *attempts* to restore a session, if the extension can detect (e.g., based on cookie expiry dates *if available and reliable*, which often isn't the case for session cookies) or if a restore fails implicitly (user still not logged in after reload), *notify* the user: "This saved session might be expired or invalid. You may need to log in again on [Website Name]." Provide an option to easily delete the potentially invalid saved session.
+*   **FR1.4 (P0): Handling HttpOnly Cookies**
+    *   **Description:** The extension must handle the limitation that it cannot directly *read* `HttpOnly` cookies due to browser security restrictions (Manifest V3). It *can* attempt to set/delete them during restore.
+    *   **Implementation:**
+        *   The extension will attempt to save all *accessible* cookies (non-HttpOnly).
+        *   During the save process, if the extension detects it's on a site likely using `HttpOnly` cookies for critical session management (e.g., common session cookie names, or simply as a general warning), it should inform the user *after* the save attempt.
+        *   The notification should clearly state that while other data (`localStorage`, `sessionStorage`, non-HttpOnly cookies) was saved, the core login state (potentially tied to `HttpOnly` cookies) might not be fully captured, and restoration might require re-login.
+    *   **User Story:** As a user saving a session on my bank's website, I want to be informed if the extension couldn't fully capture the critical login cookie due to security restrictions, so I understand why a restore might not fully log me back in.
+    *   **Acceptance Criteria:**
+        *   The extension saves all readable cookies.
+        *   A non-blocking notification/message appears in the extension UI after saving on potentially problematic sites, explaining the `HttpOnly` limitation and its implication for restoration.
+        *   The save operation still completes for accessible data.
 
-### 4.4 User Interface & Experience (UI/UX)
+*   **FR1.5 (P0): No Session Limits**
+    *   **Description:** There should be no built-in limit to the number of sessions or the number of distinct websites for which sessions can be saved by a user. Limits may only be imposed by local storage capacity or backend database constraints (which should be designed to be large).
+    *   **User Story:** As a power user, I want to save sessions for dozens of different websites and multiple accounts on each without hitting an arbitrary limit.
+    *   **Acceptance Criteria:**
+        *   The extension logic does not enforce a maximum number of saved sessions per user or per website.
+        *   Performance remains acceptable even with a large number of saved sessions.
 
-*   **FR4.1 (P0): Interaction Points:**
-    *   **Browser Action Popup:** Primary interface. Accessed by clicking the extension icon in the browser toolbar.
-    *   **Context Menu:** Right-click menu on web pages. Provides quick access to save/restore actions relevant to the current page.
-*   **FR4.2 (P0): Popup UI - Logged Out:**
-    *   "Sign Up" button.
-    *   "Sign In" button.
-    *   List of locally saved sessions (if any), grouped by website.
-    *   "Save Current Session" button (active only when on a valid web page).
-*   **FR4.3 (P0): Popup UI - Logged In:**
-    *   Display User Identifier (e.g., email).
-    *   "Log Out" button.
-    *   "Sync Status" indicator (e.g., "Synced", "Syncing...", "Offline").
-    *   List of all saved sessions (local + synced), grouped by website.
-    *   "Save Current Session" button.
-    *   Potentially a search bar to filter saved sessions (P1).
-*   **FR4.4 (P0): Session List Display:**
-    *   Group sessions by website URL (origin).
-    *   For each website group, list the saved sessions by their custom names.
-    *   Display the website's Favicon next to the website name/group heading for easy identification. Fetch and cache favicons.
-    *   Each session entry should show:
-        *   Custom Session Name.
-        *   "Restore" button.
-        *   "Delete" button.
-        *   (P1) Maybe "Edit Name" button.
-        *   (P1) Maybe a timestamp ("Saved on [Date]").
-*   **FR4.5 (P0): Context Menu UI:**
-    *   When right-clicking on a page:
-        *   "Session Sync Pro" parent menu item.
-        *   Sub-menu: "Save Current Session for [Website Name]"
-        *   Sub-menu (if sessions exist for the current site): "Restore Session for [Website Name]" -> List of saved session names for *this specific site*. Clicking a name triggers restore.
-        *   Sub-menu: "Manage All Sessions" (opens popup).
-*   **FR4.6 (P0): Feedback Mechanisms:** Use clear, non-intrusive notifications (e.g., temporary banners within the popup, or subtle browser notifications if appropriate) for success and error messages related to saving, restoring, syncing, login, logout.
-*   **FR4.7 (P1): Whitelist/Blacklist:**
-    *   Provide a settings page accessible from the popup.
-    *   Allow users to add specific website domains (e.g., `example.com`, `*.google.com`) to a blacklist.
-    *   The extension should not offer save/restore options (popup button disabled, context menu items hidden) on blacklisted sites.
-    *   Alternatively, use a whitelist approach if preferred (only operate on explicitly whitelisted sites). Define the default behavior (operate everywhere except blacklist).
+*   **FR1.6 (P0): Handling Various Session Techniques**
+    *   **Description:** The extension must correctly save and restore data from `localStorage` and `sessionStorage`, which are often used for storing session tokens (like JWTs) or application state.
+    *   **Implementation:** Ensure the mechanisms for reading from and writing to `localStorage` and `sessionStorage` via content scripts or the `scripting` API are robust and handle various data types stored within (strings, JSON objects stringified, etc.).
+    *   **User Story:** As a user of a modern web app that uses JWTs stored in `localStorage`, I want Session Sync Pro to save and restore this token correctly so I am logged in after restoring the session.
+    *   **Acceptance Criteria:**
+        *   Saving correctly captures the full state of `localStorage` and `sessionStorage` for the origin.
+        *   Restoring correctly clears and replaces the `localStorage` and `sessionStorage` with the saved state.
+        *   Handles potential JSON parsing errors gracefully if data is not stored as valid JSON.
 
-### 4.5 Authentication & Synchronization
+### 4.2 Session Restoration
 
-*   **FR5.1 (P0): Authentication Method:**
-    *   Support Sign Up and Sign In using **Email and Password only**.
-    *   Implement standard email verification for sign-up (send a verification link).
-    *   Implement password reset functionality (send password reset link to email).
-*   **FR5.2 (P0): Auth Interface:**
-    *   Sign Up / Sign In forms will *not* be directly in the popup.
-    *   The "Sign Up" and "Sign In" buttons in the popup will open a new tab or a dedicated extension page containing the respective forms (Email, Password, Confirm Password for sign-up).
-*   **FR5.3 (P0): Backend User Storage:**
-    *   Store user credentials securely in the MongoDB database.
-    *   **Password Hashing:** Passwords MUST be hashed using a strong, salted algorithm like `bcrypt`. Store only the hash, not the plaintext password.
-*   **FR5.4 (P0): Backend Session Data Storage:**
-    *   Create a MongoDB collection to store saved session data linked to user accounts.
-    *   Schema should include fields like `userId`, `sessionName`, `websiteUrl`, `websiteFaviconUrl`, `savedAt`, `cookieData`, `localStorageData`, `sessionStorageData`.
-*   **FR5.5 (P0 - WITH SECURITY WARNING): Data Encryption at Rest:**
-    *   **Requirement:** As specified, session data (`cookieData`, `localStorageData`, `sessionStorageData`) **will NOT be encrypted** at rest in the MongoDB database.
-    *   **WARNING:** This is a major security risk. If the database is compromised, all saved session cookies and storage data will be exposed in plaintext, potentially allowing attackers to hijack user sessions on target websites. This decision must be clearly communicated to end-users in the Privacy Policy.
-*   **FR5.6 (P0): Data Encryption in Transit:** All communication between the browser extension and the backend API MUST use HTTPS to encrypt data during transit. Configure the Express.js server for HTTPS only.
-*   **FR5.7 (P0): Synchronization Trigger:** Syncing occurs automatically:
-    *   When a user logs in (fetch all sessions from backend).
-    *   When a user saves a new session while logged in (push new session to backend).
-    *   When a user deletes a session while logged in (send delete request to backend).
-    *   When a user restores a session (potentially fetch latest version from backend if unsure about local copy freshness, though saving triggers sync).
-*   **FR5.8 (P0): Offline Mode & Sync Resolution:**
-    *   Users MUST be able to save, view, restore, and delete sessions stored *locally* even when offline or logged out.
-    *   When the user comes online and logs in (or is already logged in), the extension must:
-        *   Fetch sessions from the backend.
-        *   Compare local sessions with backend sessions (e.g., using timestamps or unique IDs).
-        *   Merge the lists: Upload local-only sessions, download backend-only sessions.
-        *   Handle conflicts (e.g., if a session with the same name for the same site exists both locally and remotely but with different data - prompt the user or use a 'last-saved-wins' strategy. Define the strategy - suggest 'last-saved-wins' based on timestamp).
-*   **FR5.9 (P0): Data Isolation:** The backend API MUST ensure strict data isolation. A logged-in user must ONLY be able to access, modify, or delete their *own* saved session data. Implement robust authorization checks on every API endpoint based on the authenticated user's ID.
+*   **FR2.1 (P0): Restore Trigger & Interface**
+    *   **Description:** Users must be able to view their saved sessions and initiate a restore action from the extension popup.
+    *   **Interface:** The popup will display a list of saved sessions. Each item in the list should have a clear "Restore" button.
+    *   **User Story:** As a user, I want to open the extension popup, see my saved sessions, and click a "Restore" button next to the one I need.
+    *   **Acceptance Criteria:**
+        *   The extension popup lists all saved sessions (local and synced if logged in).
+        *   Each session list item is clearly identifiable (name, website) and has a functional "Restore" button.
+        *   Clicking "Restore" initiates the restoration process for that specific session.
 
-### 4.6 Security & Permissions
+*   **FR2.2 (P0): Session List Presentation**
+    *   **Description:** Saved sessions should be presented in an organized and easily understandable manner within the popup.
+    *   **Implementation:**
+        *   Group saved sessions by website domain.
+        *   For each saved session, display:
+            *   The custom name provided by the user (FR1.3).
+            *   The website domain it belongs to.
+            *   The website's favicon (best effort retrieval).
+    *   **User Story:** As a user with many saved sessions, I want them grouped by website (e.g., all Gmail sessions together, all GitHub sessions together) and clearly labelled with my custom names and the site's icon so I can find the one I want quickly.
+    *   **Acceptance Criteria:**
+        *   Sessions are grouped visually under website headings in the popup list.
+        *   Each session entry shows the custom name, domain, and attempts to show the favicon.
+        *   The list is scrollable if it exceeds the popup height.
 
-*   **FR6.1 (P0): Browser Permissions:** The extension `manifest.json` must declare and justify the minimal required permissions:
-    *   `storage`: To store extension settings, local sessions, and user auth status.
-    *   `cookies`: To read cookies from websites and to set/remove cookies during restore.
-    *   `activeTab`: To get the URL of the current tab and potentially inject scripts on user action (like save/restore).
-    *   `contextMenus`: To add options to the right-click menu.
-    *   `scripting`: (Manifest V3) To execute scripts in the context of web pages for accessing `localStorage`/`sessionStorage` and clearing data.
-    *   `host_permissions`: `<all_urls>` is required to allow the extension to read/write cookies and execute scripts on *any* website the user wants to save/restore sessions for. This is necessary for the core functionality but requires clear justification to the user during installation.
-    *   `alarms`: (Optional, P1) Could be used for periodic background sync checks if needed, though on-action sync is the primary method.
-*   **FR6.2 (P0): Backend Security:**
-    *   Implement standard security best practices for the Express.js application:
-        *   Use security middleware (e.g., Helmet.js).
-        *   Validate and sanitize all input coming from the extension API requests.
-        *   Implement rate limiting on authentication endpoints (login, sign-up, password reset) to prevent brute-force attacks.
-        *   Protect against common web vulnerabilities (XSS, CSRF - though CSRF is less relevant for API endpoints used by extensions if using token auth, ensure proper CORS configuration).
-*   **FR6.3 (P0): Secure Authentication Flow:** Use secure methods for handling authentication tokens (e.g., JWTs stored securely in `chrome.storage.local`, *not* `localStorage`). Ensure tokens have reasonable expiration times and are transmitted securely (HTTPS).
+*   **FR2.3 (P0): Conflict Handling on Restore**
+    *   **Description:** If the user attempts to restore a session for a website while they are currently active (potentially logged in with a different session) on that same website, the extension must prompt for confirmation before proceeding.
+    *   **Implementation:** Before applying the saved session data, check if the current tab's URL matches the domain of the session being restored. If yes, display a confirmation dialog (e.g., "Restoring this session will replace your current session data for [domain]. Are you sure?").
+    *   **User Story:** As a user currently logged into my Personal Gmail, if I accidentally click restore on my Work Gmail session, I want the extension to ask me if I'm sure before it logs me out of my personal account.
+    *   **Acceptance Criteria:**
+        *   Confirmation prompt appears if restoring onto an active tab of the same domain.
+        *   Restoration only proceeds if the user confirms.
+        *   If the user cancels, the current session remains untouched.
 
-### 4.7 Edge Cases & Error Handling
+*   **FR2.4 (P0): Session Data Replacement**
+    *   **Description:** When a session is restored, the extension must *replace* the current session data (cookies, `localStorage`, `sessionStorage`) for that specific domain with the data from the saved session.
+    *   **Implementation:** The restoration process must:
+        1.  Clear all existing cookies for the specific domain.
+        2.  Clear all existing `localStorage` data for the origin.
+        3.  Clear all existing `sessionStorage` data for the origin.
+        4.  Set the cookies from the saved session.
+        5.  Populate `localStorage` with the data from the saved session.
+        6.  Populate `sessionStorage` with the data from the saved session.
+    *   **User Story:** As a user restoring a saved session, I expect my browser state for that website to exactly match what was saved, effectively logging out the old session and logging in the new one.
+    *   **Acceptance Criteria:**
+        *   Existing cookies, `localStorage`, and `sessionStorage` for the target domain/origin are completely removed before applying the saved data.
+        *   The data from the saved session is correctly applied to the browser's storage mechanisms for that domain/origin.
 
-*   **FR7.1 (P0): Invalid User Input:** Handle invalid or missing input gracefully (e.g., empty session names, invalid email formats). Provide informative error messages.
-*   **FR7.2 (P0): API Errors:** Handle potential errors during communication with the backend (network issues, server errors, authorization failures). Inform the user appropriately (e.g., "Could not sync. Server unavailable."). Maintain local state if sync fails.
-*   **FR7.3 (P0): Storage Limits:** Be mindful of browser storage limits (`chrome.storage.local`). While generous, warn the user if they are approaching limits (unlikely with text data unless storing huge numbers of sessions). Consider if backend storage needs limits (specified as *no limits* per user request).
-*   **FR7.4 (P0): Website Structure Changes:** Acknowledge that if a website drastically changes its login mechanism, cookie structure, or reliance on `localStorage`/`sessionStorage` after a session is saved, restoring that session may fail or not result in a logged-in state. The extension cannot predict or automatically adapt to these site-specific changes. Inform the user if restoration seems unsuccessful.
-*   **FR7.5 (P0): Concurrent Extension Usage:** If the user has the extension open in multiple browser windows/profiles simultaneously and is logged into the same account, ensure synchronization logic handles potential race conditions gracefully (e.g., using timestamps, eventual consistency). The 'last save wins' approach helps here.
-*   **FR7.6 (P1): Very Large Storage Data:** Consider potential performance implications if `localStorage` or `sessionStorage` on a site contains extremely large amounts of data. Implement data retrieval/setting efficiently. Maybe add a warning if saved data size is excessive.
+*   **FR2.5 (P0): Page Reload After Restore**
+    *   **Description:** After successfully restoring a session, the user must be prompted whether they want to reload the current page for the changes to take effect.
+    *   **Implementation:** Upon successful completion of FR2.4, display a notification or dialog asking the user: "Session restored for [domain]. Reload page to apply changes?" with "Reload" and "Later" (or similar) options.
+    *   **User Story:** As a user, after restoring a session, I want the option to reload the page immediately to see the effect, or wait if I need to do something else first.
+    *   **Acceptance Criteria:**
+        *   User is prompted to reload after successful restoration.
+        *   Clicking "Reload" reloads the active tab.
+        *   Clicking "Later" (or dismissing the prompt) does not reload the page.
+
+*   **FR2.6 (P0): Handling Expired/Invalid Sessions**
+    *   **Description:** The extension should attempt to detect and notify the user if a restored session appears to be invalid or expired immediately after restoration.
+    *   **Implementation:** While perfect detection is difficult, the extension can monitor for common indicators shortly after a restore (e.g., if a page reload immediately redirects to a login page). If such behavior is suspected, display a notification like: "The restored session for [domain] may be expired or invalid. You might need to log in again." This is best-effort.
+    *   **User Story:** As a user, if I restore a session that has since expired on the server, I want the extension to give me a hint that it might not have worked fully, instead of leaving me confused.
+    *   **Acceptance Criteria:**
+        *   The extension includes logic to heuristically detect potential session invalidity post-restore.
+        *   A clear, non-intrusive notification is shown if an invalid session state is suspected.
+
+*   **FR2.7 (P0): Handling Website Changes**
+    *   **Description:** If a website's structure, cookie usage, or login mechanism changes after a session was saved, a restored session might fail. The extension should handle this gracefully.
+    *   **Implementation:** The restoration process itself might complete (data is injected), but the website might not recognize the old session data. If errors occur during the *application* of data (e.g., setting cookies failed), report that. If data is applied but the site doesn't respond as expected (covered partially by FR2.6), the primary response is user education (via documentation or potentially the `HttpOnly` warning). The extension cannot automatically adapt to arbitrary site changes. Focus on robust error reporting during the restore *process*.
+    *   **User Story:** As a user, if I try to restore a very old session and the website has changed significantly, I understand it might not work, but I expect the extension to report any errors it encountered during the attempt, rather than failing silently.
+    *   **Acceptance Criteria:**
+        *   Errors encountered during the cookie/storage setting process are caught and reported to the user.
+        *   The extension does not crash if restored data is incompatible with the current website state.
+
+### 4.3 User Interface & Experience (UI/UX)
+
+*   **FR3.1 (P0): Interaction Points**
+    *   **Description:** Users will interact with the extension primarily through the Browser Action Popup and the page's context menu.
+    *   **Popup:** Provides access to:
+        *   Sign Up / Sign In buttons (leading to auth flow).
+        *   List of saved sessions (view, restore, potentially delete).
+        *   "Save Current Session" button.
+        *   Status indicators (login status, sync status).
+        *   Settings/Options access (e.g., for whitelist/blacklist).
+    *   **Context Menu:** Provides a shortcut to "Save Session for this Site".
+    *   **User Story:** As a user, I want quick access to save and restore functions either by clicking the extension icon or by right-clicking on the webpage.
+    *   **Acceptance Criteria:**
+        *   Extension has a functional browser action icon that opens a popup.
+        *   Popup contains the core UI elements described above.
+        *   A relevant option appears in the page context menu.
+
+*   **FR3.2 (P0): User Feedback**
+    *   **Description:** Provide clear, concise feedback to the user after performing actions.
+    *   **Implementation:** Use temporary, non-intrusive notifications (e.g., toasts or status messages within the popup) for:
+        *   Successful session save ("Session '[name]' saved for [domain]").
+        *   Successful session restore ("Session '[name]' restored for [domain]. Reload?").
+        *   Sync status updates ("Syncing...", "Sync complete", "Sync failed").
+        *   Error messages (e.g., "Failed to save session: [reason]", "Failed to restore session: [reason]", "Login failed").
+    *   **User Story:** As a user, I want immediate confirmation when I save or restore a session, and clear messages if something goes wrong.
+    *   **Acceptance Criteria:**
+        *   Success messages are displayed clearly upon completion of save/restore/sync actions.
+        *   Error messages are displayed clearly, providing context if possible, when actions fail.
+        *   Feedback is timely and disappears automatically or is easily dismissible.
+
+*   **FR3.3 (P0): Whitelist/Blacklist Feature**
+    *   **Description:** Allow users to disable the extension's functionality (saving/restoring) on specific websites.
+    *   **Implementation:** Provide a settings page accessible from the popup where users can add domains to a "disabled sites" list (blacklist). When the user visits a site on this list, the "Save Session" options should be disabled, and restoration for that site should not be offered.
+    *   **User Story:** As a user, I don't want Session Sync Pro to interact with my banking website, so I want to add it to a blacklist to prevent accidental saves or restores.
+    *   **Acceptance Criteria:**
+        *   A settings section allows adding/removing domains from a blacklist.
+        *   Save/restore functionality is disabled for blacklisted domains.
+        *   The UI clearly indicates when the extension is disabled for the current site.
+
+### 4.4 Authentication & Synchronization
+
+*   **FR4.1 (P0): Authentication Method**
+    *   **Description:** Implement user Sign Up and Sign In using Email and Password.
+    *   **Implementation:**
+        *   Backend needs endpoints for `/auth/signup` and `/auth/login`.
+        *   Signup requires email and password, performs validation (email format, password complexity - e.g., min length), checks for existing user, hashes password (FR5.3), stores user in MongoDB.
+        *   Login requires email and password, validates credentials against stored hashed password, generates a session token (e.g., JWT) upon success.
+        *   Extension securely stores the auth token (e.g., in `chrome.storage.local`) and sends it with subsequent requests to protected backend endpoints.
+    *   **User Story:** As a user, I want to create an account using my email and a password, and log in with those credentials to sync my sessions.
+    *   **Acceptance Criteria:**
+        *   User can successfully create an account via the signup process.
+        *   User can successfully log in using their registered email and password.
+        *   Auth token is issued on login and stored securely by the extension.
+        *   Backend endpoints handle signup/login logic correctly, including validation and password hashing.
+
+*   **FR4.2 (P0): Auth UI Trigger**
+    *   **Description:** The extension popup will display "Sign Up" and "Sign In" buttons when the user is logged out.
+    *   **Implementation:** These buttons, when clicked, should open a new tab or a dedicated extension page/modal containing the actual Sign Up / Sign In forms. The forms themselves are not embedded directly within the small popup space.
+    *   **User Story:** As a logged-out user, I want to see clear buttons in the popup to start the Sign Up or Sign In process.
+    *   **Acceptance Criteria:**
+        *   "Sign Up" and "Sign In" buttons are visible in the popup only when the user is logged out.
+        *   Clicking these buttons initiates the respective authentication flow (e.g., opens the form in a new tab).
+
+*   **FR4.3 (P0): Backend Storage & Sync**
+    *   **Description:** Authenticated users' saved sessions (name, domain, cookies, `localStorage`, `sessionStorage` data) must be stored in the MongoDB database via the Express.js backend and synced across devices.
+    *   **Implementation:**
+        *   Backend needs protected endpoints (requiring auth token) for creating, retrieving, updating (potentially, e.g., rename), and deleting saved sessions.
+        *   Data schema in MongoDB should associate sessions with a `userId`.
+        *   Define clear API contracts between the extension and backend for session data transfer.
+    *   **User Story:** As a logged-in user, when I save a session on my work computer, I want it to automatically appear in the extension on my home computer.
+    *   **Acceptance Criteria:**
+        *   Backend provides CRUD endpoints for user sessions, protected by authentication.
+        *   Session data is correctly stored in MongoDB, linked to the authenticated user.
+        *   Extension successfully sends saved session data to the backend.
+        *   Extension successfully fetches session data from the backend upon login or sync.
+
+*   **FR4.4 (P0): Sync Trigger**
+    *   **Description:** Synchronization with the backend should occur automatically after specific user actions when online.
+    *   **Implementation:** The extension should initiate a sync operation with the backend:
+        *   Immediately after a user successfully saves a new session.
+        *   Immediately after a user deletes a session (if delete functionality is added).
+        *   Immediately after a user logs in.
+        *   Potentially after a user renames a session (if rename functionality is added).
+    *   **User Story:** As a user, I expect my changes (like saving a new session) to be pushed to the cloud immediately so they are available on my other devices without manual intervention.
+    *   **Acceptance Criteria:**
+        *   Sync is automatically triggered upon successful save/delete/rename actions when the user is logged in and online.
+        *   Sync is triggered upon successful login.
+
+*   **FR4.5 (P0): Offline Functionality**
+    *   **Description:** Users must be able to save and restore sessions locally even when offline or logged out.
+    *   **Implementation:**
+        *   The extension must always store saved sessions in the browser's local storage (`chrome.storage.local`) regardless of login or connectivity status.
+        *   Restore operations should primarily use this local data.
+    *   **User Story:** As a user working offline, I still want to be able to save my current work session locally and restore previously saved local sessions.
+    *   **Acceptance Criteria:**
+        *   Saving a session works correctly when the browser is offline.
+        *   Restoring a locally saved session works correctly when offline.
+        *   Sessions saved offline are persisted locally.
+
+*   **FR4.6 (P0): Offline Sync Handling**
+    *   **Description:** When the user comes back online after having made local changes (saves/deletes) while logged in, the extension must automatically sync these changes with the backend.
+    *   **Implementation:**
+        *   Maintain a local queue or flag for pending sync operations.
+        *   Periodically check for network connectivity.
+        *   When connectivity is restored and the user is logged in, process the pending sync queue (upload new/modified sessions, potentially handle deletions).
+        *   Implement a basic conflict resolution strategy (e.g., "last write wins" based on timestamp, or always prefer server state upon initial sync after reconnect). For V1, server authoritative after initial sync might be simplest.
+    *   **User Story:** As a user who saved several sessions while offline on the train, I expect them to automatically upload to my account once I connect to Wi-Fi at the office.
+    *   **Acceptance Criteria:**
+        *   Local changes made while logged in but offline are detected.
+        *   Changes are automatically synced to the backend when connectivity is restored.
+        *   Basic conflict handling prevents data loss where possible (though complex conflicts might require user intervention in future versions).
+
+*   **FR4.7 (P0): Unauthenticated Usage**
+    *   **Description:** Users who have not signed up or are not logged in can still use the core save/restore functionality locally.
+    *   **Implementation:** All save/restore operations act on `chrome.storage.local`. Sync features are disabled or hidden. The extension clearly indicates that sessions are stored locally only and will not be synced.
+    *   **User Story:** As a new user trying out the extension, I want to be able to save and restore sessions immediately without needing to create an account first.
+    *   **Acceptance Criteria:**
+        *   Save/restore functionality works fully using local storage when the user is logged out.
+        *   The UI makes it clear that sync is not active.
+        *   No data is sent to the backend when logged out.
+
+*   **FR4.8 (P0): Session Visibility When Logged Out**
+    *   **Description:** Locally saved sessions should remain visible and usable in the extension popup even when the user is logged out.
+    *   **Implementation:** The popup UI should always load sessions from `chrome.storage.local` first. If logged in, it can then merge/update this list with data from the backend sync.
+    *   **User Story:** As a user who sometimes logs out, I still want to see and use the sessions I saved locally without having to log back in.
+    *   **Acceptance Criteria:**
+        *   Sessions saved while logged in or out are visible in the popup list when the user is logged out.
+        *   These local sessions can be restored while logged out.
+
+### 4.5 Security
+
+*   **FR5.1 (P0): Secure Transit**
+    *   **Description:** All communication between the browser extension and the backend server must be encrypted using HTTPS.
+    *   **Implementation:** The backend server must be configured to only accept HTTPS connections. The extension must make all API calls to `https://` endpoints.
+    *   **User Story:** As a user, I expect my session data, including potentially sensitive cookies, to be encrypted while traveling between my browser and the service's servers.
+    *   **Acceptance Criteria:**
+        *   Backend enforces HTTPS.
+        *   Extension exclusively uses HTTPS URLs for API calls.
+        *   Network inspection confirms data is transferred over TLS/SSL.
+
+*   **FR5.2 (P0): Backend Authorization**
+    *   **Description:** The backend must implement robust authorization checks to ensure users can only access and modify their *own* saved session data.
+    *   **Implementation:** Every backend API endpoint that deals with user-specific data must validate the provided authentication token (e.g., JWT) and ensure the requested resource belongs to the authenticated user ID extracted from the token. Database queries must include `userId` filters.
+    *   **User Story:** As a user, I need absolute certainty that no other user of Session Sync Pro can ever access my saved sessions.
+    *   **Acceptance Criteria:**
+        *   API endpoints reject requests for data belonging to other users, even with a valid auth token.
+        *   Penetration testing (simulated) confirms user data isolation.
+
+*   **FR5.3 (P0): Password Hashing**
+    *   **Description:** User passwords must never be stored in plaintext. They must be securely hashed before storing in the database.
+    *   **Implementation:** Use a strong, adaptive hashing algorithm with a salt, such as `bcrypt` or `Argon2`. Implement this hashing during the signup process and verify passwords during login by hashing the provided password and comparing it to the stored hash.
+    *   **User Story:** As a user, I expect my account password to be stored securely using industry best practices so that even if the database is compromised, my actual password is not revealed.
+    *   **Acceptance Criteria:**
+        *   Passwords in the MongoDB `users` collection are stored as hashes, not plaintext.
+        *   Hashing uses a recognized strong algorithm (e.g., bcrypt).
+        *   Login correctly verifies passwords against the stored hashes.
+
+*   **FR5.4 (P0): Rate Limiting**
+    *   **Description:** Implement rate limiting on authentication endpoints (`/auth/login`, `/auth/signup`) and potentially sensitive API endpoints to mitigate brute-force attacks.
+    *   **Implementation:** Use middleware in the Express.js application (e.g., `express-rate-limit`) to limit the number of requests per IP address or user account to sensitive endpoints within a given time window.
+    *   **User Story:** As a user, I expect the service to have protections against automated attacks trying to guess my password or flood the system.
+    *   **Acceptance Criteria:**
+        *   Excessive login attempts from the same IP are blocked temporarily (e.g., HTTP 429 response).
+        *   Rate limits are configured to reasonable levels that don't hinder normal usage.
+
+*   **FR5.5 (P0): Secure Handling of Session Data in Extension**
+    *   **Description:** Session data stored locally by the extension (`chrome.storage.local`) should be handled carefully, acknowledging it contains sensitive information.
+    *   **Implementation:** While `chrome.storage.local` provides some isolation, avoid exposing raw session data unnecessarily in console logs or error messages. Be mindful of permissions requested.
+    *   **User Story:** As a user, I trust the extension to handle the sensitive session data it stores locally with care.
+    *   **Acceptance Criteria:**
+        *   No sensitive session content (cookie values, storage contents) is logged to the browser console during normal operation.
+        *   Error handling avoids leaking sensitive data.
+
+*   **FR5.6 (P0): Backend Data Storage (Encryption at Rest - WARNING)**
+    *   **Description:** Store session data (cookies, `localStorage`, `sessionStorage`) associated with user accounts in the MongoDB database.
+    *   **Implementation:** Session data will be stored in MongoDB documents linked to the `userId`.
+    *   **SECURITY WARNING:** The user specification (Q15) indicated *no encryption at rest* for this sensitive data. **This is strongly discouraged and presents a significant security risk.** If the database is compromised, all saved session data (including cookies that might grant direct account access) would be exposed in plaintext. **It is highly recommended to reconsider this requirement and implement field-level encryption or full database encryption for the collections storing session data.** The implementation should proceed as specified *but* this warning must be acknowledged.
+    *   **User Story:** As a user, I expect my saved sessions to be stored on the backend so I can sync them. (Implicitly, users expect this to be done securely).
+    *   **Acceptance Criteria:**
+        *   Session data is successfully stored in and retrieved from MongoDB.
+        *   Data is correctly associated with the `userId`.
+        *   (Per user spec, data is NOT encrypted at rest - Acknowledge associated risk).
+
+### 4.6 Permissions
+
+*   **FR6.1 (P0): Browser Permissions**
+    *   **Description:** The extension must request the minimum necessary permissions to function correctly and must justify these permissions clearly in the extension store listing.
+    *   **Required Permissions:**
+        *   `storage`: To store extension settings, local sessions, and user auth tokens.
+        *   `cookies`: To read and write cookies for the target domains.
+        *   `scripting`: To inject content scripts into pages to access `localStorage` and `sessionStorage` and potentially interact with the page DOM if needed (e.g., for post-restore checks). Requires host permissions.
+        *   `activeTab`: Potentially useful for context menu actions, but `<all_urls>` is likely needed for broader functionality.
+        *   `contextMenus`: To add the "Save Session" option to the right-click menu.
+        *   `alarms`: Potentially for periodic checks (like connectivity) or scheduled syncs.
+        *   **Host Permissions:** `<all_urls>`: Required to allow the extension to read/write cookies and inject scripts (`scripting` permission) on any website where the user might want to save/restore a session. This is a broad permission and needs clear justification to the user.
+    *   **User Story:** As a user installing the extension, I want to understand why it needs permissions like accessing data on all websites, and trust that it's necessary for the core functionality.
+    *   **Acceptance Criteria:**
+        *   The `manifest.json` file correctly declares all necessary permissions.
+        *   Permissions requested are the minimum required for the specified features.
+        *   Store description clearly explains the need for each permission, especially `<all_urls>`.
 
 ## 5. Non-Functional Requirements (NFRs)
 
-*   **NFR1 (P0): Performance:**
-    *   Saving and restoring sessions should feel near-instantaneous (< 1-2 seconds typically).
+*   **NFR1 (P0): Performance**
+    *   Session save/restore operations should feel near-instantaneous (< 1 second).
+    *   Extension background processes should consume minimal CPU/memory during idle time.
+    *   Sync operations should be efficient and not block the UI excessively.
     *   Popup UI should load quickly.
-    *   Backend API responses should be fast (< 500ms for typical operations).
-    *   Extension background processes should consume minimal system resources.
-*   **NFR2 (P0): Reliability:**
-    *   The extension should function consistently across supported browsers.
-    *   Syncing should be reliable when online. Offline mode must work robustly.
-    *   Data corruption (local or backend) should be prevented through careful handling.
-*   **NFR3 (P0): Security:** (See specific FRs above)
-    *   HTTPS enforced for all backend communication.
-    *   Passwords securely hashed (bcrypt).
-    *   Robust authorization on the backend.
-    *   Input validation and sanitization.
-    *   Rate limiting on auth endpoints.
-    *   **Explicit Acknowledgement:** Session data at rest is *not* encrypted per requirements, posing a significant risk.
-*   **NFR4 (P0): Usability:**
-    *   The UI should be intuitive and easy to understand.
-    *   Key actions (save, restore) should be readily accessible.
-    *   Feedback messages must be clear and helpful.
-*   **NFR5 (P0): Maintainability:**
-    *   Codebase must be modular, well-documented, and follow consistent standards.
-    *   Easy to set up the development environment.
-    *   Clear separation between extension and backend code.
-*   **NFR6 (P1): Scalability:**
-    *   The backend should be designed to handle a growing number of users and saved sessions without significant performance degradation (within reasonable limits for a typical extension audience). Consider database indexing for MongoDB.
+*   **NFR2 (P0): Reliability**
+    *   Extension should function consistently across supported browsers (target latest Chrome/Firefox).
+    *   Backend service should have high availability.
+    *   Data synchronization should be reliable, minimizing data loss or corruption.
+    *   Graceful error handling should prevent crashes.
+*   **NFR3 (P0): Usability**
+    *   Interface should be intuitive and easy to learn.
+    *   User feedback (success, error, status) should be clear and timely.
+    *   Common workflows (save, find session, restore) should be simple and require minimal clicks.
+*   **NFR4 (P0): Security**
+    *   Adhere to all security requirements outlined in FR5.
+    *   Protect against common extension vulnerabilities (e.g., cross-site scripting in popup/options pages).
+    *   Backend should be secure against common web vulnerabilities (OWASP Top 10).
+    *   **Reiterate Warning:** The lack of encryption at rest (FR5.6) significantly impacts the overall security posture.
+*   **NFR5 (P0): Maintainability**
+    *   Codebase (extension and backend) must be well-structured, following standard conventions for JS, Express, and Manifest V3.
+    *   Code must be well-documented (comments, README).
+    *   Use linters and formatters (e.g., ESLint, Prettier) for code consistency.
+    *   Clear separation between UI, background logic, and content scripts in the extension.
+    *   Clear separation between API routes, controllers, services, and data models in the backend.
+*   **NFR6 (P1): Scalability**
+    *   Backend infrastructure (Express.js on a suitable host, MongoDB) should be capable of handling a moderate initial user load and allow for future scaling if needed. Database queries should be optimized.
 
-## 6. User Stories
+## 6. User Interface (UI) and User Experience (UX) Details
 
-*   **US1 (P0):** As a web developer, I want to save the session state (cookies, local/session storage) of my application under a specific test user account with a custom name (e.g., "Admin User - Staging"), so that I can quickly restore this state later without manual login and setup.
-*   **US2 (P0):** As a social media manager, I want to save my login sessions for multiple client accounts on Twitter, so that I can switch between them with one click from the extension popup.
-*   **US3 (P0):** As a user with work and personal Google accounts, I want to save sessions for both accounts on `google.com`, so that I can easily switch between my work and personal contexts without logging out/in repeatedly.
-*   **US4 (P0):** As a user of the extension, I want to sign up for an account using my email and password, so that my saved sessions can be synced across my different computers.
-*   **US5 (P0):** As a logged-in user, I want my newly saved sessions to automatically upload to the cloud, so I can access them from another device later.
-*   **US6 (P0):** As a user, I want to be prompted before restoring a session if it will overwrite my current session on that website, so I don't accidentally lose my current state.
-*   **US7 (P0):** As a user, I want to see my saved sessions grouped by website and identified by favicons and custom names in the extension popup, so I can easily find the session I want to restore.
-*   **US8 (P0):** As a user, I want to be able to use the core save/restore features locally even if I don't create an account or if I'm offline, so the extension is useful immediately and during network outages.
-*   **US9 (P1):** As a user, I want to be notified if a restored session seems expired or invalid, so I know I might need to log in manually.
-*   **US10 (P1):** As a user, I want to blacklist certain sensitive websites (like my bank), so the extension doesn't offer to save potentially risky session data for them.
+*   **Popup Design:**
+    *   Clean, simple layout.
+    *   Header showing extension name/logo and login status/button.
+    *   Main area listing saved sessions, grouped by site.
+        *   Each site group header shows domain name.
+        *   Each session item shows custom name, favicon, and a "Restore" button. Maybe a "Delete" icon.
+    *   "Save Current Session" button prominently displayed when on a valid web page (not disabled site or `chrome://` page).
+    *   Link/button to access Settings (for blacklist, etc.).
+    *   Status indicator for sync operations.
+*   **Context Menu:** Single item: "Session Sync Pro: Save session for this site".
+*   **Auth Flow:** Clicking Sign Up/In buttons opens a dedicated tab/window with standard forms for email/password entry. Clear validation messages on forms.
+*   **Feedback:** Use toasts or inline messages within the popup for notifications. Avoid disruptive `alert()` calls.
 
-## 7. Acceptance Criteria (Examples)
+## 7. Technical Specifications
 
-*   **AC1 (For US1):**
-    *   Given I am on `staging.myapp.com` and logged in as "Admin User".
-    *   When I open the extension popup and click "Save Current Session".
-    *   And I enter the name "Admin User - Staging" and confirm.
-    *   Then a success message is shown.
-    *   And a new session named "Admin User - Staging" associated with `staging.myapp.com` appears in the session list.
-    *   And (if logged in) this session data is sent to the backend.
-*   **AC2 (For US4 & US5):**
-    *   Given I am not logged into the extension.
-    *   When I click "Sign Up" in the popup, complete the sign-up form in the new tab, and verify my email.
-    *   Then I can log in using the "Sign In" button and my credentials.
-    *   And the popup now shows my email and a "Log Out" button.
-    *   And any sessions I save subsequently are synced to the backend.
-*   **AC3 (For US6):**
-    *   Given I am logged into `website.com` with Session A.
-    *   And I have a saved session named "Session B" for `website.com`.
-    *   When I click "Restore" for "Session B".
-    *   Then a confirmation prompt appears asking if I want to replace the current session.
-    *   And if I confirm, Session A's data is cleared, Session B's data is applied, and I am prompted to reload.
-    *   And if I cancel, no changes are made.
-*   **AC4 (For US8):**
-    *   Given I have installed the extension but have not signed up/logged in.
-    *   When I save a session for `example.com`.
-    *   Then the session is saved locally and appears in the popup list.
-    *   And I can restore this session successfully while still logged out.
-    *   And if I later sign up/log in, this locally saved session is synced to my account.
+*   **Frontend (Browser Extension):**
+    *   **Manifest:** Version 3 (Manifest V3)
+    *   **Languages:** HTML, CSS, JavaScript (ES6+)
+    *   **Frameworks/Libraries:** None required, but small utility libraries (like for date formatting or UUID generation) are acceptable if needed. No large UI frameworks (like React/Vue) unless deemed essential for complexity management (keep it simple if possible).
+    *   **Storage:** `chrome.storage.local` for local session data, settings, auth token.
+    *   **APIs:** `chrome.cookies`, `chrome.scripting`, `chrome.storage`, `chrome.runtime`, `chrome.tabs`, `chrome.contextMenus`, potentially `chrome.alarms`.
+*   **Backend:**
+    *   **Framework:** Express.js (Node.js)
+    *   **Language:** JavaScript (Node.js) or TypeScript (preferred for maintainability).
+    *   **Database:** MongoDB (using Mongoose ODM is recommended).
+    *   **Authentication:** JWT (JSON Web Tokens) for session management after login.
+    *   **Password Hashing:** bcrypt.js or equivalent.
+*   **Project Structure:**
+    *   `session-sync-pro/`
+        *   `extension/` (Contains all browser extension code: manifest.json, popup/, background/, content_scripts/, icons/, etc.)
+        *   `backend/` (Contains all Express.js backend code: server.js, routes/, controllers/, models/, middleware/, etc.)
+        *   `README.md` (Overall project setup, build, run instructions)
+        *   `.gitignore`
 
-## 8. Open Issues / Future Considerations (Optional)
+## 8. Security Considerations Summary
 
-*   **Encryption at Rest:** Reiterate the security implications of the current requirement *not* to encrypt session data at rest. Strongly recommend revisiting this.
-*   **Advanced Conflict Resolution:** Implement a more sophisticated UI for handling sync conflicts instead of just 'last-saved-wins'.
-*   **Session Sharing:** Allow users to securely share specific saved sessions with other users of the extension (requires significant backend changes for permissions).
-*   **Automatic Session Saving:** Option to automatically save a session upon logout detection (complex and potentially unreliable).
-*   **Firefox Compatibility:** Thorough testing and potential adjustments needed for Firefox's extension APIs if full cross-browser support is a hard requirement.
+*   **HTTPS:** Mandatory for all client-server communication.
+*   **Password Hashing:** Use bcrypt/Argon2 for user passwords.
+*   **Authentication:** Use JWTs securely (e.g., short expiry, HTTPS only).
+*   **Authorization:** Strict checking on backend to ensure users access only their own data.
+*   **Rate Limiting:** Protect auth endpoints against brute force.
+*   **Input Validation:** Sanitize/validate all input on both frontend and backend.
+*   **Extension Permissions:** Use minimum required permissions, justify `<all_urls>`.
+*   **Data Handling:** Avoid logging sensitive data; be mindful of data stored locally.
+*   **Encryption at Rest (WARNING):** **Strongly advise implementing encryption at rest for session data stored in MongoDB, despite initial user specification.** Document the chosen approach (or lack thereof) clearly.
 
-## 9. Out of Scope (For Version 1.0)
+## 9. Error Handling & Edge Cases
 
-*   OAuth Sign In (Google, GitHub, etc.).
-*   Session sharing between users.
-*   Automatic session saving/updating.
-*   Browser Profile management.
-*   Storing other types of data (e.g., form fill data unrelated to sessions).
-*   Advanced analytics or tracking (beyond basic error reporting if implemented).
-*   Import/Export functionality for saved sessions.
+*   **Network Errors:** Handle failed API calls gracefully (retry mechanisms where appropriate, clear user feedback).
+*   **Sync Conflicts:** Implement a basic resolution strategy (e.g., last-write-wins based on timestamp, prompt user if complex).
+*   **Storage Limits:** Handle potential `chrome.storage.local` quota limits (though unlikely for session metadata, `localStorage`/`sessionStorage` content could be large). Notify user if storage fails.
+*   **Invalid Data:** Handle cases where stored data might be corrupted or in an unexpected format.
+*   **API Failures:** Backend should return meaningful error codes/messages; extension should interpret these for user feedback.
+*   **Browser/Platform Issues:** Note any known compatibility issues with specific browser versions.
+
+## 10. Future Considerations
+
+*(User requested no future considerations for this PRD, aiming for a final product spec)*
+
+## 11. Acceptance Criteria Overview
+
+*   All P0 Functional Requirements (FRs) are implemented and meet their individual acceptance criteria.
+*   Non-Functional Requirements (NFRs) related to performance, reliability, usability, and security are demonstrably met through testing and code review.
+*   The extension installs and runs correctly in the target browsers (latest stable Chrome, Firefox).
+*   The backend deploys and runs correctly.
+*   Code is well-documented and follows specified structure and quality guidelines.
+*   End-to-end user flows (Sign up -> Save -> Sync -> Restore on another device -> Log out -> Restore local) function correctly.
+*   Security measures (HTTPS, hashing, authZ, rate limiting) are confirmed to be in place.
 
 ---
 
-This PRD provides a comprehensive blueprint for the AI agent. The agent should follow these requirements closely, paying particular attention to the specified technology stack, feature implementations, security measures (and lack thereof where specified), and UI/UX details. The modular structure and documentation requirements are crucial for ensuring a maintainable and production-ready outcome.
+**Instruction to AI Agent:** Please adhere strictly to this Product Requirements Document when building the Session Sync Pro extension and backend. Ensure the implementation covers all specified functional and non-functional requirements, pays close attention to the UI/UX details, and implements the security measures as described (while noting the significant risk associated with the lack of encryption at rest per user specification FR5.6). Deliver well-structured, documented, and maintainable codebases for both the extension (Manifest V3) and the backend (Express.js/MongoDB). The goal is a production-ready, polished application based on these requirements.
