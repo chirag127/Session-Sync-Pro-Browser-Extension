@@ -10,6 +10,8 @@ Session Sync Pro is a browser extension that allows users to save and restore co
 -   Intuitive user interface (Browser Action Popup & Context Menu)
 -   Offline capabilities for local session management
 -   Automatic pre-restore session backup
+-   Domain blacklisting for sensitive websites
+-   Support for HttpOnly cookies (with limitations)
 
 ## Project Structure
 
@@ -18,17 +20,35 @@ Session Sync Pro is a browser extension that allows users to save and restore co
 
 ## Setup Instructions
 
+### Quick Setup
+
+To set up the entire project at once:
+
+```bash
+# Install all dependencies
+npm run install:all
+
+# Generate extension icons
+npm run generate-icons
+
+# Build the extension
+npm run build:extension
+
+# Start the backend server
+npm run dev:backend
+```
+
 ### Backend Setup
 
 1. Navigate to the backend directory:
 
-    ```
+    ```bash
     cd backend
     ```
 
 2. Install dependencies:
 
-    ```
+    ```bash
     npm install
     ```
 
@@ -39,41 +59,40 @@ Session Sync Pro is a browser extension that allows users to save and restore co
     MONGODB_URI=mongodb://localhost:27017/session-sync-pro
     JWT_SECRET=your_jwt_secret_key_change_in_production
     JWT_EXPIRES_IN=7d
+    EMAIL_SERVICE=gmail
+    EMAIL_USER=your_email@gmail.com
+    EMAIL_PASSWORD=your_app_password
+    CLIENT_URL=http://localhost:8080
     ```
 
 4. Start the server:
-    ```
+    ```bash
     npm run dev
     ```
 
 ### Extension Setup
 
-cd extension
-npm install
-npm run generate-icons
-npm run build
-
 1. Navigate to the extension directory:
 
-    ```
+    ```bash
     cd extension
     ```
 
 2. Install dependencies:
 
-    ```
+    ```bash
     npm install
     ```
 
 3. Generate icons:
 
-    ```
+    ```bash
     npm run generate-icons
     ```
 
 4. Build the extension:
 
-    ```
+    ```bash
     npm run build
     ```
 
@@ -85,24 +104,21 @@ npm run build
 
 ### Backend Development
 
-cd backend
-npm install
-npm run dev
-
 -   Run the server in development mode:
 
-    ```
+    ```bash
+    cd backend
     npm run dev
     ```
 
 -   Run tests:
 
-    ```
+    ```bash
     npm test
     ```
 
 -   Run linting:
-    ```
+    ```bash
     npm run lint
     ```
 
@@ -110,24 +126,25 @@ npm run dev
 
 -   Run webpack in watch mode:
 
-    ```
+    ```bash
+    cd extension
     npm run dev
     ```
 
 -   Generate icons:
 
-    ```
+    ```bash
     npm run generate-icons
     ```
 
 -   Run tests:
 
-    ```
+    ```bash
     npm test
     ```
 
 -   Run linting:
-    ```
+    ```bash
     npm run lint
     ```
 
@@ -140,13 +157,28 @@ npm run dev
     -   Request body: `{ email, password }`
     -   Response: `{ message, token, user }`
 
+-   `POST /api/auth/verify-email`: Verify user email
+
+    -   Request body: `{ token }`
+    -   Response: `{ message, token, user }`
+
 -   `POST /api/auth/login`: Login a user
 
     -   Request body: `{ email, password }`
     -   Response: `{ message, token, user }`
 
 -   `GET /api/auth/me`: Get current user (requires authentication)
+
     -   Response: `{ user }`
+
+-   `POST /api/auth/forgot-password`: Request password reset
+
+    -   Request body: `{ email }`
+    -   Response: `{ message }`
+
+-   `POST /api/auth/reset-password`: Reset password
+    -   Request body: `{ token, password }`
+    -   Response: `{ message, token, user }`
 
 ### Session Endpoints
 
@@ -164,12 +196,12 @@ npm run dev
 
 -   `POST /api/sessions`: Create a new session
 
-    -   Request body: `{ name, domain, cookies, localStorage, sessionStorage, hasHttpOnlyCookies }`
+    -   Request body: `{ name, domain, faviconUrl, cookies, localStorage, sessionStorage, hasHttpOnlyCookies }`
     -   Response: `{ message, session }`
 
 -   `PUT /api/sessions/:id`: Update a session
 
-    -   Request body: `{ name, cookies, localStorage, sessionStorage, hasHttpOnlyCookies }`
+    -   Request body: `{ name, faviconUrl, cookies, localStorage, sessionStorage, hasHttpOnlyCookies }`
     -   Response: `{ message, session }`
 
 -   `PATCH /api/sessions/:id/lastUsed`: Update last used timestamp
@@ -186,6 +218,12 @@ npm run dev
 -   JWT tokens are used for authentication
 -   Rate limiting is implemented to prevent brute-force attacks
 -   Input validation is performed on all API endpoints
+-   **Important Note**: Session data is not encrypted at rest in the database. This is a potential security risk and should be considered when using the extension with sensitive websites. Use the blacklist feature to prevent saving sessions for sensitive websites.
+
+## Limitations
+
+-   **HttpOnly Cookies**: The extension can save and restore HttpOnly cookies, but with limitations. During save, the extension can only retrieve metadata about HttpOnly cookies (name, domain, path) but not their values. During restore, the extension will attempt to set these cookies, but success depends on whether the server accepts the session based solely on setting these known cookies.
+-   **Website Structure Changes**: If a website drastically changes its login mechanism, cookie structure, or reliance on localStorage/sessionStorage after a session is saved, restoring that session may fail or not result in a logged-in state.
 
 ## License
 

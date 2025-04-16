@@ -1,0 +1,28 @@
+{
+  "name": "session-sync-pro",
+  "version": "1.0.0",
+  "description": "Browser extension for saving and restoring web sessions with cross-device synchronization",
+  "private": true,
+  "scripts": {
+    "install:all": "npm install && npm run install:backend && npm run install:extension",
+    "install:backend": "cd backend && npm install",
+    "install:extension": "cd extension && npm install",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:extension": "cd extension && npm run dev",
+    "build:extension": "cd extension && npm run build",
+    "generate-icons": "cd extension && npm run generate-icons",
+    "test:backend": "cd backend && npm test",
+    "test:extension": "cd extension && npm test",
+    "lint:backend": "cd backend && npm run lint",
+    "lint:extension": "cd extension && npm run lint"
+  },
+  "keywords": [
+    "browser-extension",
+    "session-management",
+    "cookies",
+    "localStorage",
+    "sessionStorage"
+  ],
+  "author": "Chirag Singhal",
+  "license": "MIT"
+}
