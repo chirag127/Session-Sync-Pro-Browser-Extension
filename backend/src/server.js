@@ -1,65 +1,60 @@
-const express = require("express");
-const mongoose = require("mongoose");
-const cors = require("cors");
-const helmet = require("helmet");
-const morgan = require("morgan");
-const dotenv = require("dotenv");
-const rateLimit = require("express-rate-limit");
-
-// Load environment variables
-dotenv.config();
+require('dotenv').config();
+const express = require('express');
+const mongoose = require('mongoose');
+const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 
 // Import routes
-const authRoutes = require("./routes/auth");
-const sessionRoutes = require("./routes/sessions");
+const authRoutes = require('./routes/auth.routes');
+const sessionRoutes = require('./routes/session.routes');
 
-// Create Express app
+// Import middleware
+const { errorHandler } = require('./middleware/error.middleware');
+const { authMiddleware } = require('./middleware/auth.middleware');
+
+// Initialize express app
 const app = express();
-
-// Set up middleware
-app.use(express.json({ limit: "10mb" })); // Increased limit for session data
-app.use(express.urlencoded({ extended: true }));
-app.use(cors());
-app.use(helmet());
-app.use(morgan("dev"));
-
-// Rate limiting
-const apiLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // limit each IP to 100 requests per windowMs
-    standardHeaders: true,
-    legacyHeaders: false,
-});
-
-// Apply rate limiting to auth routes
-app.use("/api/auth", apiLimiter);
-
-// Routes
-app.use("/api/auth", authRoutes);
-app.use("/api/sessions", sessionRoutes);
-
-// Error handling middleware
-app.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(500).json({
-        message: "Internal Server Error",
-        error: process.env.NODE_ENV === "development" ? err.message : undefined,
-    });
-});
-
-// Import database connection
-const connectDB = require("./config/db");
+const PORT = process.env.PORT || 3000;
 
 // Connect to MongoDB
-const PORT = process.env.PORT || 3000;
-connectDB().then(() => {
-    app.listen(PORT, () => {
-        console.log(`Server running on port ${PORT}`);
-    });
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => console.log('Connected to MongoDB'))
+  .catch(err => console.error('MongoDB connection error:', err));
+
+// Apply middleware
+app.use(helmet());
+app.use(cors());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Apply rate limiting to auth routes
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again after 15 minutes'
+});
+
+// Routes
+app.use('/api/auth', authLimiter, authRoutes);
+app.use('/api/sessions', authMiddleware, sessionRoutes);
+
+// Health check route
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', message: 'Server is running' });
+});
+
+// Error handling middleware
+app.use(errorHandler);
+
+// Start server
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
 
 // Handle unhandled promise rejections
-process.on("unhandledRejection", (err) => {
-    console.error("Unhandled Promise Rejection:", err);
-    // Don't crash the server, just log the error
+process.on('unhandledRejection', (err) => {
+  console.error('Unhandled Rejection:', err);
 });
+
+module.exports = app; // For testing purposes
